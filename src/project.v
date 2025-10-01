@@ -15,13 +15,55 @@ module tt_um_ttihp_counter (
     input  wire       clk,      // clock
     input  wire       rst_n     // reset_n - low to reset
 );
+  wire load_en = ui_in[0];
+  wire count_en = ui_in[1];
+  wire output_en = ui_in[2];
+  wire [7:0] load_data = uio_in;
 
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+  counter counter_inst (
+    .clk(clk),
+    .rst_n(rst_n),
+    .load(load_en),
+    .load_data(load_data),
+    .count_en(count_en),
+    .output_en(output_en),
+    .count(uo_out)
+  );
 
+  // Unused outputs
+  assign uio_out = 8'b0;
+  assign uio_oe = 8'b0;
+  
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
+  wire _unused = &{ena, ui_in[7:3], 1'b0};
+
+endmodule
+
+module counter (
+  input wire clk,
+  input wire rst_n,
+  input wire load,
+  input wire [7:0] load_data,
+  input wire count_en,
+  input wire output_en,
+  output wire [7:0] count
+);
+
+  reg [7:0] count_reg;
+
+  // Tri-state output
+  assign count = output_en ? count_reg : 8'bz;
+
+  always @(posedge clk or negedge rst_n) begin
+    if (rst_n == 0) begin
+      count_reg <= 8'b0;
+    end else begin
+      if (load) begin
+        count_reg <= load_data;
+      end else if (count_en) begin
+        count_reg <= count_reg + 1'b1;
+      end
+    end
+  end
 
 endmodule
